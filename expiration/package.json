@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "ts-node-dev src/index.ts",
-    "test": "jest --watchAll --verbose"
+    "start": "ts-node-dev src/index.ts"
   },
   "jest": {
     "transform": {
@@ -22,7 +21,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aitickets123654/common-kafka": "^1.0.27",
+    "@aitickets123654/common-kafka": "^1.0.32",
     "@types/bull": "^3.15.9",
     "bull": "^4.16.5",
     "kafkajs": "^2.2.4",

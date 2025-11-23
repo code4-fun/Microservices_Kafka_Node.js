@@ -1,11 +1,11 @@
 export enum Topics {
-  TicketCreated = 'ticket-created6',
-  TicketUpdated = 'ticket-updated6',
+  TicketCreated = 'tickets.ticket.created.v1',
+  TicketUpdated = 'tickets.ticket.updated.v1',
 
-  OrderCreated = 'order-created6',
-  OrderCancelled = 'order-cancelled6',
+  OrderCreated = 'orders.order.created.v1',
+  OrderCancelled = 'orders.order.cancelled.v1',
 
-  ExpirationComplete = 'expiration-complete6',
+  ExpirationComplete = 'expiration.expiration.complete.v1',
 
-  PaymentCreated = 'payment-created6',
+  PaymentCreated = 'payments.payment.created.v1',
 }

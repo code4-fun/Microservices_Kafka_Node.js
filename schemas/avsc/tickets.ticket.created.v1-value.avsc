@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "TicketCreatedData",
+  "namespace": "tickets",
+  "fields": [
+    { "name": "id", "type": "string" },
+    { "name": "title", "type": "string" },
+    { "name": "price", "type": "double" },
+    { "name": "userId", "type": "string" },
+    { "name": "version", "type": "int" }
+  ]
+}

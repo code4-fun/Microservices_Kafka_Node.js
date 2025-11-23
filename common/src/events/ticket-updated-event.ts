@@ -1,13 +1,7 @@
 import { Topics } from './topics';
+import { TicketUpdatedData } from './TSTypes/tickets.ticket.updated.v1-value';
 
 export interface TicketUpdatedEvent {
   topic: Topics.TicketUpdated;
-  data: {
-    id: string;
-    title: string;
-    price: number;
-    userId: string;
-    orderId?: string;
-    version: number;
-  };
+  data: TicketUpdatedData;
 }

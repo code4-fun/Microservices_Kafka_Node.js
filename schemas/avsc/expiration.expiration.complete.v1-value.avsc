@@ -1,0 +1,8 @@
+{
+  "type": "record",
+  "name": "ExpirationCompleteData",
+  "namespace": "expiration",
+  "fields": [
+    { "name": "orderId", "type": "string" }
+  ]
+}

@@ -17,7 +17,7 @@ spec:
             - sh
             - -c
             - |
-              echo "⏳ Waiting for Kafka to be ready..."
+              echo "Waiting for Kafka to be ready..."
               until nc -z kafka-srv 9092; do
                 echo "Kafka is not ready yet..."
                 sleep 3

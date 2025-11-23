@@ -1,10 +1,7 @@
 import { Topics } from './topics';
+import { PaymentCreatedData } from './TSTypes/payments.payment.created.v1-value';
 
 export interface PaymentCreatedEvent {
   topic: Topics.PaymentCreated;
-  data: {
-    id: string;
-    orderId: string;
-    stripeId: string;
-  };
+  data: PaymentCreatedData;
 }

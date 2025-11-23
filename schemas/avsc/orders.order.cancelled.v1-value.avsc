@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "OrderCancelledData",
+  "namespace": "orders",
+  "fields": [
+    { "name": "id", "type": "string" },
+    {
+      "name": "ticket",
+      "type": {
+        "type": "record",
+        "name": "OrderCancelledTicket",
+        "fields": [
+          { "name": "id", "type": "string" }
+        ]
+      }
+    },
+    { "name": "version", "type": "int" }
+  ]
+}

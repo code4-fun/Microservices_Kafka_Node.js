@@ -1,0 +1,13 @@
+{
+  "name": "schemas-job",
+  "version": "1.0.0",
+  "main": "register.js",
+  "scripts": {
+    "register": "node register.js"
+  },
+  "dependencies": {
+    "@kafkajs/confluent-schema-registry": "^3.9.0",
+    "@ovotech/avro-ts": "^6.2.0",
+    "glob": "^11.0.3"
+  }
+}

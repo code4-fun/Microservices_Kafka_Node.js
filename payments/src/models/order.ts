@@ -1,19 +1,19 @@
 import mongoose from 'mongoose';
-import { OrderStatus } from '@aitickets123654/common-kafka';
+import { Orders } from '@aitickets123654/common-kafka';
 
 interface OrderAttrs {
   id: string;
   version: number;
   userId: string;
   price: number;
-  status: OrderStatus;
+  status: Orders.OrderStatus;
 }
 
 interface OrderDoc extends mongoose.Document {
   version: number;
   userId: string;
   price: number;
-  status: OrderStatus;
+  status: Orders.OrderStatus;
 }
 
 interface OrderModel extends mongoose.Model<OrderDoc> {

@@ -1,5 +1,6 @@
 import { Consumer, EachMessagePayload } from 'kafkajs';
 import { Topics } from './topics';
+import { registry } from './config/registry';
 
 interface Event {
   topic: Topics;
@@ -37,8 +38,7 @@ export abstract class Listener<T extends Event> {
 
         try {
           for (const message of batch.messages) {
-            const offset = message.offset;
-            const value = message.value?.toString();
+            const { offset, value } = message;
 
             if (!value) {
               resolveOffset(offset);
@@ -48,9 +48,9 @@ export abstract class Listener<T extends Event> {
 
             let data;
             try {
-              data = JSON.parse(value);
+              data = await registry.decode(value);
             } catch (err) {
-              console.error(`Невалидный JSON ${topic}/${partition}@${offset}`, err);
+              console.error(`Avro decode failed for ${topic}/${partition}@${offset}`, err);
               resolveOffset(offset);
               lastProcessedOffset = offset;
               continue;
@@ -62,7 +62,7 @@ export abstract class Listener<T extends Event> {
               lastProcessedOffset = offset;
               await heartbeat();
             } catch (err) {
-              console.warn(`Ошибка при обработке ${topic}/${partition}@${offset}:`, err);
+              console.warn(`Error processing ${topic}/${partition}@${offset}:`, err);
               this.consumer.seek({ topic, partition, offset });
               await new Promise((r) => setTimeout(r, 50));
               break;
@@ -74,7 +74,7 @@ export abstract class Listener<T extends Event> {
               await commitOffsetsIfNecessary();
             }
           } catch (commitErr) {
-            console.error(`commitOffsetsIfNecessary не сработал (${topic}/${partition})`, commitErr);
+            console.error(`commitOffsetsIfNecessary failed (${topic}/${partition})`, commitErr);
           }
         }
       },

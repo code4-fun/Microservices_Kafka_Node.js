@@ -28,7 +28,7 @@ export class OrderCancelledListener extends Listener<OrderCancelledEvent> {
       price: ticket.price,
       userId: ticket.userId,
       version: ticket.version,
-      orderId: ticket.orderId,
+      orderId: ticket.orderId || null,
     });
   }
 }

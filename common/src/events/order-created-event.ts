@@ -1,17 +1,7 @@
 import { Topics } from './topics';
-import { OrderStatus } from './types/order-status';
+import { OrderCreatedData } from './TSTypes/orders.order.created.v1-value';
 
 export interface OrderCreatedEvent {
   topic: Topics.OrderCreated;
-  data: {
-    id: string;
-    status: OrderStatus;
-    userId: string;
-    expiresAt: string;
-    ticket: {
-      id: string;
-      price: number;
-    };
-    version: number;
-  };
+  data: OrderCreatedData;
 }
