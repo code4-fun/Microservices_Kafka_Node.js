@@ -3,7 +3,7 @@ import { requireAuth, validateRequest } from '@aitickets123654/common-kafka';
 import { body } from 'express-validator';
 import { Ticket } from '../models/ticket';
 import mongoose from 'mongoose';
-import { createOutboxEvent } from '../events/workers/create-outbox-event';
+import { Outbox } from '../models/outbox';
 
 const router = express.Router();
 
@@ -29,19 +29,20 @@ router.post(
       });
       await ticket.save({ session });
 
-      await createOutboxEvent({
-        aggregateType: 'ticket',
-        aggregateId: ticket.id,
-        eventType: 'TicketCreated',
-        payload: {
-          id: ticket.id,
-          title: ticket.title,
-          price: ticket.price,
-          userId: ticket.userId,
-          version: ticket.version,
+      await Outbox.build(
+        {
+          aggregateType: 'ticket',
+          aggregateId: ticket.id,
+          eventType: 'TicketCreated',
+          payload: {
+            id: ticket.id,
+            title: ticket.title,
+            price: ticket.price,
+            userId: ticket.userId,
+            version: ticket.version,
+          },
         },
-        session,
-      });
+      ).save({ session });
 
       await session.commitTransaction();
       await session.endSession();

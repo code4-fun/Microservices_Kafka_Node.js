@@ -1,17 +1,18 @@
 import { model, Schema, Document, Model } from 'mongoose';
+import { EventMap } from '@aitickets123654/common-kafka';
 
-export interface OutboxAttrs {
+export interface OutboxAttrs<T extends keyof EventMap> {
   aggregateType: string;
   aggregateId: string;
-  eventType: string;
-  payload: any;
+  eventType: T;
+  payload: EventMap[T]['data'];
 }
 
-export interface OutboxDoc extends Document {
+export interface OutboxDoc<T extends keyof EventMap> extends Document {
   aggregateType: string;
   aggregateId: string;
-  eventType: string;
-  payload: any;
+  eventType: T;
+  payload: EventMap[T]['data'];
   createdAt: Date;
   availableAt: Date;
   processingAt: Date;
@@ -20,8 +21,8 @@ export interface OutboxDoc extends Document {
   status: 'pending' | 'processing' | 'published' | 'failed';
 }
 
-interface OutboxModel extends Model<OutboxDoc> {
-  build(attrs: OutboxAttrs): OutboxDoc;
+interface OutboxModel extends Model<OutboxDoc<keyof EventMap>> {
+  build<T extends keyof EventMap>(attrs: OutboxAttrs<T>): OutboxDoc<T>;
 }
 
 const outboxSchema = new Schema(
@@ -41,8 +42,10 @@ const outboxSchema = new Schema(
   }
 );
 
-outboxSchema.statics.build = (attrs: OutboxAttrs) => {
-  return new Outbox(attrs);
+outboxSchema.statics.build = function <T extends keyof EventMap>(
+  attrs: OutboxAttrs<T>
+): OutboxDoc<T> {
+  return new Outbox(attrs) as unknown as OutboxDoc<T>;
 };
 
 const Outbox = model('Outbox', outboxSchema) as unknown as OutboxModel;

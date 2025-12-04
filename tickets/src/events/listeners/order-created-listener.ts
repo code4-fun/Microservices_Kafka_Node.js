@@ -4,7 +4,7 @@ import { kafkaClient } from '../../kafka-client'
 import { orderCreatedGroupId } from './group-id';
 import { Ticket, TicketDoc } from '../../models/ticket';
 import mongoose from 'mongoose';
-import { createOutboxEvent } from '../workers/create-outbox-event';
+import { Outbox } from '../../models/outbox';
 
 export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
   topic: Topics.OrderCreated = Topics.OrderCreated;
@@ -29,20 +29,21 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
       ticket.set({ orderId: data.id });
       await ticket.save({ session });
 
-      await createOutboxEvent({
-        aggregateType: 'ticket',
-        aggregateId: ticket.id,
-        eventType: 'TicketUpdated',
-        payload: {
-          id: ticket.id,
-          title: ticket.title,
-          price: ticket.price,
-          userId: ticket.userId,
-          orderId: ticket.orderId || null,
-          version: ticket.version,
+      await Outbox.build(
+        {
+          aggregateType: 'ticket',
+          aggregateId: ticket.id,
+          eventType: 'TicketUpdated',
+          payload: {
+            id: ticket.id,
+            title: ticket.title,
+            price: ticket.price,
+            userId: ticket.userId,
+            orderId: ticket.orderId || null,
+            version: ticket.version,
+          },
         },
-        session,
-      });
+      ).save({ session });
 
       await session.commitTransaction();
       await session.endSession();

@@ -12,6 +12,19 @@ spec:
       labels:
         app: kafka-ui
     spec:
+      initContainers:
+        - name: wait-for-schema-registry
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for Schema Registry to be ready..."
+              until nc -z schema-registry-srv 8081; do
+                echo "Schema Registry is not ready yet..."
+                sleep 3
+              done
+              echo "Schema Registry is up!"
       containers:
         - name: kafka-ui
           image: provectuslabs/kafka-ui:latest
@@ -26,6 +39,8 @@ spec:
               value: "" # оставить пустым для KRaft
             - name: KAFKA_CLUSTERS_0_READONLY
               value: "false"
+            - name: KAFKA_CLUSTERS_0_SCHEMAREGISTRY
+              value: "http://schema-registry-srv:8081"
           resources:
             limits:
               memory: "1Gi"

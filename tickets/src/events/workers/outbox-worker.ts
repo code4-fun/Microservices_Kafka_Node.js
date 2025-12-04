@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
 import { Outbox, OutboxDoc } from '../../models/outbox';
-import { EventMap } from '@aitickets123654/common-kafka';
+import { EventMap, Topics } from '@aitickets123654/common-kafka';
 import { TicketCreatedPublisher } from '../publishers/ticket-created-publisher';
 import { TicketUpdatedPublisher } from '../publishers/ticket-updated-publisher';
+import { DLQPublisher } from '../publishers/dlq-publisher'
 
 const BATCH_SIZE = Number(process.env.OUTBOX_BATCH_SIZE || 100);
 const CONCURRENCY = Number(process.env.OUTBOX_CONCURRENCY || 10);
@@ -29,8 +30,8 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return res;
 }
 
-async function claimBatch(): Promise<OutboxDoc[]> {
-  const claimed: OutboxDoc[] = [];
+export async function claimBatch(): Promise<OutboxDoc<keyof EventMap>[]> {
+  const claimed: OutboxDoc<keyof EventMap>[] = [];
 
   for (let i = 0; i < BATCH_SIZE; i++) {
     const doc = await Outbox.findOneAndUpdate(
@@ -48,7 +49,7 @@ async function claimBatch(): Promise<OutboxDoc[]> {
         sort: { createdAt: 1 },
         returnDocument: 'after',
       }
-    ).exec() as unknown as OutboxDoc | null;
+    ).exec() as unknown as OutboxDoc<keyof EventMap> | null;
 
     if (!doc) break;
 
@@ -63,7 +64,7 @@ function computeBackoff(attempts: number) {
   return Date.now() + Math.pow(2, next) * BACKOFF_BASE_MS;
 }
 
-async function handleFailure(event: OutboxDoc, err: any) {
+async function handleFailure(event: OutboxDoc<keyof EventMap>, err: any) {
   const nextAttempts = (event.attempts || 0) + 1;
   const update: any = {
     attempts: nextAttempts,
@@ -73,8 +74,30 @@ async function handleFailure(event: OutboxDoc, err: any) {
 
   await Outbox.updateOne({ _id: event._id }, { $set: update }).exec();
 
-  // if moved to failed -> copy to DLQ for later inspection
+  // if moved to failed -> send to DLQ topic and copy to DLQ collection for later inspection
   if (nextAttempts >= MAX_ATTEMPTS) {
+    function isTopicKey(key: string): key is keyof typeof Topics {
+      return key in Topics;
+    }
+
+    let dlqTopic: Topics;
+    let dlqEventType = `${event.eventType}DLQ`
+
+    if (isTopicKey(dlqEventType)) {
+      dlqTopic = Topics[dlqEventType];
+    } else {
+      throw Error('No DLQ topic found');
+    }
+
+    const dlqPublisher = new DLQPublisher<typeof event.payload>(dlqTopic);
+    await dlqPublisher.publish({
+      ...event.payload,
+      error: String(err?.message || err),
+      attempts: nextAttempts,
+      failedAt: new Date().toISOString(),
+    });
+    console.error(`Event sent to DLQ topic: ${event._id}`, err);
+
     const dlqDoc = {
       outboxId: event._id,
       aggregateType: event.aggregateType,
@@ -86,7 +109,7 @@ async function handleFailure(event: OutboxDoc, err: any) {
       failedAt: new Date(),
     };
     await mongoose.connection.collection(DLQ_COLLECTION).insertOne(dlqDoc);
-    console.error(`Event sent to DLQ: outboxId=${String(event._id)}`, err);
+    console.error(`Event sent to DLQ collection: outboxId=${String(event._id)}`, err);
   } else {
     console.warn(
       `Event processing failed, will retry later: outboxId=${String(event._id)}, attempts=${nextAttempts}`
@@ -94,20 +117,33 @@ async function handleFailure(event: OutboxDoc, err: any) {
   }
 }
 
-export async function processEventTyped(event: OutboxDoc) {
-  const eventType = event.eventType as keyof EventMap;
+export async function processEventTyped<T extends keyof EventMap>(event: OutboxDoc<T>) {
+  const eventType = event.eventType;
 
-  const PublisherClass = publishers[eventType];
+  const PublisherClass = publishers[eventType] as
+    | (new () => { publish(data: EventMap[T]['data']): Promise<void> })
+    | undefined;
   if (!PublisherClass) throw new Error(`Unknown eventType: ${eventType}`);
 
   const publisher = new PublisherClass();
   await publisher.publish(event.payload);
 
-  await Outbox.updateOne({ _id: event._id }, { $set: { status: 'published', publishedAt: new Date() } }).exec();
+  // test fail publishing message
+  // throw new Error('Force DLQ for testing');
+
+  await Outbox.updateOne(
+    { _id: event._id },
+    {
+      $set: {
+        status: 'published',
+        publishedAt: new Date()
+      }
+    }
+  ).exec();
 }
 
 // process claimed batch with limited concurrency
-async function processClaimedBatch(claimed: OutboxDoc[]) {
+async function processClaimedBatch(claimed: any[]) {
   const chunks = chunkArray(claimed, CONCURRENCY);
   for (const c of chunks) {
     const promises = c.map(async (evt) => {
@@ -130,7 +166,7 @@ export async function runOutboxWorkerOnce() {
   try {
     const claimed = await claimBatch();
     if (!claimed.length) return;
-    await processClaimedBatch(claimed);
+    await processClaimedBatch(claimed as any[]);
   } finally {
     polling = false;
   }
